@@ -1,21 +1,16 @@
 package pe.com.app.controller;
 
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import lombok.RequiredArgsConstructor;
 import pe.com.app.model.dto.ClienteDto;
-import pe.com.app.model.entity.Cliente;
 import pe.com.app.model.payload.MensajeResponse;
 import pe.com.app.service.IClienteService;
 
@@ -26,18 +21,10 @@ public class ClienteController {
 
     private final IClienteService clienteService;
 
-    @PostMapping("cliente")
-    @ResponseStatus(HttpStatus.CREATED)
+    @PostMapping("/cliente")
     public ResponseEntity<MensajeResponse<ClienteDto>> create(@RequestBody ClienteDto clienteDto) {
         try {
-            Cliente clienteSave = clienteService.save(clienteDto);
-            ClienteDto clienteResponse = ClienteDto.builder()
-                    .idCliente(clienteSave.getIdCliente())
-                    .nombre(clienteSave.getNombre())
-                    .apellido(clienteSave.getApellido())
-                    .correo(clienteSave.getCorreo())
-                    .fechaRegistro(clienteSave.getFechaRegistro())
-                    .build();
+            ClienteDto clienteResponse = clienteService.save(clienteDto);
             return new ResponseEntity<>(new MensajeResponse<>("Cliente creado correctamente", clienteResponse),
                     HttpStatus.CREATED);
         } catch (DataAccessException exDt) {
@@ -47,31 +34,17 @@ public class ClienteController {
     }
 
     @PutMapping("cliente/{id}")
-    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<MensajeResponse<ClienteDto>> update(@RequestBody ClienteDto clienteDto,
             @PathVariable Integer id) {
         try {
-
             if (clienteService.existsById(id)) {
-
                 clienteDto.setIdCliente(id);
-                Cliente clienteUpdate = clienteService.save(clienteDto);
-                ClienteDto clienteResponse = ClienteDto.builder()
-                        .idCliente(clienteUpdate.getIdCliente())
-                        .nombre(clienteUpdate.getNombre())
-                        .apellido(clienteUpdate.getApellido())
-                        .correo(clienteUpdate.getCorreo())
-                        .fechaRegistro(clienteUpdate.getFechaRegistro())
-                        .build();
-
+                ClienteDto clienteResponse = clienteService.save(clienteDto);
                 return new ResponseEntity<>(new MensajeResponse<>("Cliente actualizado correctamente", clienteResponse),
                         HttpStatus.CREATED);
-
             }
-
             return new ResponseEntity<>(new MensajeResponse<>("Cliente no encontrado con ID " + id, null),
                     HttpStatus.NOT_FOUND);
-
         } catch (DataAccessException exDt) {
             return new ResponseEntity<>(
                     new MensajeResponse<>("Error al actualizar el cliente", null, exDt.getMessage()),
@@ -81,50 +54,27 @@ public class ClienteController {
 
     @DeleteMapping("cliente/{id}")
     public ResponseEntity<MensajeResponse<Void>> delete(@PathVariable Integer id) {
-        /* Map<String, Object> response = new HashMap<>(); */
-
         try {
-            Cliente clienteDelete = clienteService.findById(id);
-
+            ClienteDto clienteDelete = clienteService.findById(id);
             if (clienteDelete != null) {
                 clienteService.delete(clienteDelete);
-                /*
-                 * response.put("mensaje", "Cliente eliminado correctamente");
-                 * response.put("cliente", clienteDelete);
-                 */
                 return new ResponseEntity<>(new MensajeResponse<>("Cliente eliminado correctamente", null),
                         HttpStatus.NO_CONTENT);
             } else {
-                /*
-                 * response.put("mensaje", "Cliente con ID " + id + " no encontrado");
-                 * response.put("cliente", null);
-                 */
                 return new ResponseEntity<>(new MensajeResponse<>("Cliente con ID " + id + " no encontrado", null),
                         HttpStatus.NOT_FOUND);
             }
         } catch (DataAccessException exDt) {
-            /*
-             * response.put("mensaje", "Error al eliminar el cliente");
-             * response.put("error", exDt.getMessage());
-             */
             return new ResponseEntity<>(new MensajeResponse<>("Error al eliminar el cliente", null, exDt.getMessage()),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("cliente/{id}")
-    @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<MensajeResponse<ClienteDto>> showById(@PathVariable Integer id) {
         try {
-            Cliente cliente = clienteService.findById(id);
-            if (cliente != null) {
-                ClienteDto clienteResponse = ClienteDto.builder()
-                        .idCliente(cliente.getIdCliente())
-                        .nombre(cliente.getNombre())
-                        .apellido(cliente.getApellido())
-                        .correo(cliente.getCorreo())
-                        .fechaRegistro(cliente.getFechaRegistro())
-                        .build();
+            ClienteDto clienteResponse = clienteService.findById(id);
+            if (clienteResponse != null) {
                 return new ResponseEntity<>(new MensajeResponse<>("Cliente encontrado correctamente", clienteResponse),
                         HttpStatus.OK);
             } else {
@@ -133,6 +83,22 @@ public class ClienteController {
             }
         } catch (DataAccessException exDt) {
             return new ResponseEntity<>(new MensajeResponse<>("Error al obtener el cliente", null, exDt.getMessage()),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("clientes")
+    public ResponseEntity<MensajeResponse<Page<ClienteDto>>> showAll(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "idCliente") String sortBy) {
+
+        try {
+            Pageable pageable = PageRequest.of(page - 1, size, Sort.by(sortBy).ascending());
+            Page<ClienteDto> resultPage = clienteService.findAll(pageable);
+            return new ResponseEntity<>(new MensajeResponse<>("Lista de cliente obtenido exitosamente", resultPage), HttpStatus.OK);
+        } catch (DataAccessException exDt) {
+            return new ResponseEntity<>(new MensajeResponse<>("Error al obtener la lista de clientes", null, exDt.getMessage()),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

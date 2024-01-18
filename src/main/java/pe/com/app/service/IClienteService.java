@@ -1,20 +1,23 @@
 package pe.com.app.service;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import pe.com.app.model.dto.ClienteDto;
-import pe.com.app.model.entity.Cliente;
 
 public interface IClienteService {
 
-    Cliente save(ClienteDto cliente);
+    ClienteDto save(ClienteDto cliente);
 
-    Cliente findById(Integer id);
+    ClienteDto findById(Integer id);
 
-    void delete(Cliente cliente);
+    void delete(ClienteDto cliente);
     
     boolean existsById(Integer id);
 
+    Page<ClienteDto> findAll(Pageable pageable);
+
 }
+
 
 
